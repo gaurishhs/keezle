@@ -35,7 +35,7 @@ func HashPassword(password string) (string, error) {
 }
 
 func generatePasswordHash(password string, p *params) (encodedHash string, err error) {
-	salt, err := generateRandomBytes(p.saltLength)
+	salt, err := GenerateRandomBytes(int(p.saltLength))
 
 	if err != nil {
 		return "", err

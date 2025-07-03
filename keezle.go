@@ -5,7 +5,9 @@ import (
 
 	"github.com/gaurishhs/keezle/adapters"
 	"github.com/gaurishhs/keezle/logger"
+	"github.com/gaurishhs/keezle/models"
 	"github.com/gaurishhs/keezle/utils"
+	"github.com/go-playground/validator/v10"
 )
 
 type SessionConfig struct {
@@ -13,32 +15,38 @@ type SessionConfig struct {
 	// If zero, the session will not expire.
 	// If negative, the session will expire immediately.
 	// Default is 7 days.
-	Expires   time.Duration
-	UpdateAge time.Duration
-	FreshAge  time.Duration
+	ActivePeriod time.Duration
+	IdlePeriod   time.Duration
+	Cookie       struct {
+		Expires bool
+		Name    string
+		Secure  bool
+	}
 }
 
-type AttributesConfig struct {
-	User    interface{}
-	Session interface{}
+type AttributesConfig[UA, SA any] struct {
+	User    UA
+	Session SA
 }
 
-type Config[UA, SA any] struct {
+type Config[UA, SA models.AnyStruct] struct {
 	Adapter    adapters.Adapter[UA, SA]
 	Session    *SessionConfig
 	Secret     [][]byte
 	Logger     logger.Logger
 	Hash       func(string) (string, error)
-	Attributes *AttributesConfig
+	Attributes *AttributesConfig[UA, SA]
 }
 
-type Keezle[UA, SA any] struct {
-	Config *Config[UA, SA]
+type Keezle[UA, SA models.AnyStruct] struct {
+	Config    *Config[UA, SA]
+	Validator *validator.Validate
 }
 
-func New[UA, SA any](config *Config[UA, SA]) (res *Keezle[UA, SA]) {
+func New[UA, SA models.AnyStruct](config *Config[UA, SA]) (res *Keezle[UA, SA]) {
 	res = &Keezle[UA, SA]{
-		Config: config,
+		Config:    config,
+		Validator: validator.New(validator.WithRequiredStructEnabled()),
 	}
 
 	if res.Config.Logger == nil {
