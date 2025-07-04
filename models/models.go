@@ -2,10 +2,16 @@ package models
 
 import "time"
 
-type Key struct {
+type DBKey struct {
 	ID       string
 	UserID   string
 	Password string
+}
+
+type Key struct {
+	ID       string
+	UserID   string
+	Password bool
 }
 
 type User[UA AnyStruct] struct {
