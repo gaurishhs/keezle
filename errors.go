@@ -8,4 +8,5 @@ var (
 	ErrInvalidEmail     = errors.New("invalid email address, please provide a valid email")
 	ErrProviderColon    = errors.New("provider must not contain colons (:)")
 	ErrInvalidSessionId = errors.New("invalid session id")
+	ErrInvalidPassword  = errors.New("invalid password")
 )

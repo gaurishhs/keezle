@@ -20,9 +20,6 @@ func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA
 	if opts.UserID == "" {
 		opts.UserID = xid.New().String()
 	}
-	// if err := k.Validator.Struct(opts.Attributes); err != nil {
-	// 	return nil, err
-	// }
 	user := &models.User[UA]{
 		ID:         opts.UserID,
 		Attributes: opts.Attributes,
@@ -41,8 +38,8 @@ func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA
 	err = k.Config.Adapter.CreateUser(&adapters.CreateUserOpts[UA]{
 		User: user,
 		Key: &models.DBKey{
-			ID:       keyId,
-			Password: opts.Key.Password,
+			ID:       &keyId,
+			Password: &opts.Key.Password,
 		},
 	})
 

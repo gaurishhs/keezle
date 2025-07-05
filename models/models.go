@@ -3,9 +3,9 @@ package models
 import "time"
 
 type DBKey struct {
-	ID       string
-	UserID   string
-	Password string
+	ID       *string
+	UserID   *string
+	Password *string
 }
 
 type Key struct {

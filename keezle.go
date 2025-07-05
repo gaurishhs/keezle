@@ -30,12 +30,13 @@ type AttributesConfig[UA, SA any] struct {
 }
 
 type Config[UA, SA models.AnyStruct] struct {
-	Adapter    adapters.Adapter[UA, SA]
-	Session    *SessionConfig
-	Secret     [][]byte
-	Logger     logger.Logger
-	Hash       func(string) (string, error)
-	Attributes *AttributesConfig[UA, SA]
+	Adapter                adapters.Adapter[UA, SA]
+	Session                *SessionConfig
+	Secret                 [][]byte
+	Logger                 logger.Logger
+	Hash                   func(string) (string, error)
+	ComparePasswordAndHash func(string, string) (bool, error)
+	Attributes             *AttributesConfig[UA, SA]
 }
 
 type Keezle[UA, SA models.AnyStruct] struct {
