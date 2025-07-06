@@ -1,5 +1,3 @@
 package models
 
-type AnyStruct interface {
-	~struct{}
-}
+type AnyStruct = any

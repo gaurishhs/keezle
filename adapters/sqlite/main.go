@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/gaurishhs/keezle/adapters"
 	"github.com/gaurishhs/keezle/models"
 
 	_ "modernc.org/sqlite"
@@ -21,12 +22,7 @@ type SQLiteAdapter[UA, SA models.AnyStruct] struct {
 	Tables TableConfig
 }
 
-type CreateUserOpts[UA models.AnyStruct] struct {
-	User *models.User[UA]
-	Key  *models.DBKey
-}
-
-func initalize[UA, SA models.AnyStruct](dsnURI string) *SQLiteAdapter[UA, SA] {
+func Initialize[UA, SA models.AnyStruct](dsnURI string) *SQLiteAdapter[UA, SA] {
 	db, err := sql.Open("sqlite", dsnURI)
 	if err != nil {
 		panic("Failed to connect to SQLite database: " + err.Error())
@@ -36,7 +32,7 @@ func initalize[UA, SA models.AnyStruct](dsnURI string) *SQLiteAdapter[UA, SA] {
 	}
 }
 
-func (a *SQLiteAdapter[UA, SA]) CreateUser(opts CreateUserOpts[UA]) error {
+func (a *SQLiteAdapter[UA, SA]) CreateUser(opts *adapters.CreateUserOpts[UA]) error {
 	_, err := a.DB.Exec(fmt.Sprintf("insert into `%s` (id, attributes) values (?, ?)", a.Tables.UserTable), opts.User.ID, opts.User.Attributes)
 	if err != nil {
 		return err
@@ -81,7 +77,7 @@ func (a *SQLiteAdapter[UA, SA]) UpdateUser(userId string, attributes UA) (*model
 }
 
 func (a *SQLiteAdapter[UA, SA]) DeleteUser(userId string) error {
-	_, err := a.DB.Exec(fmt.Sprintf("DELETE FROM `%s` where `id` = ?", a.Tables.UserTable), userId)
+	_, err := a.DB.Exec(fmt.Sprintf("DELETE FROM `%s` WHERE `id` = ?", a.Tables.UserTable), userId)
 	if err != nil {
 		return err
 	}

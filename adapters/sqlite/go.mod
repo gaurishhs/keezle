@@ -1,9 +1,8 @@
-module github.com/gaurishhs/keezle/adapters/sqlite
+module github.com/gaurishhs/keezle/adapters/postgresql
 
 go 1.24.2
 
 require (
-	github.com/gaurishhs/keezle v0.0.0-20250703161151-c66b9f83bb22
 	modernc.org/sqlite v1.38.0
 )
 
