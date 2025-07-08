@@ -2,7 +2,6 @@ package postgresql
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/gaurishhs/keezle/adapters"
@@ -32,6 +31,13 @@ func Initialize[UA, SA models.AnyStruct](connString string) *PostgreSQLAdapter[U
 	}
 }
 
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func (a *PostgreSQLAdapter[UA, SA]) CreateUser(opts *adapters.CreateUserOpts[UA]) error {
 	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO `%s` (id, attributes) VALUES ($1, $2)", a.Tables.UserTable), opts.User.ID, opts.User.Attributes)
 	if err != nil {
@@ -41,18 +47,9 @@ func (a *PostgreSQLAdapter[UA, SA]) CreateUser(opts *adapters.CreateUserOpts[UA]
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) GetUser(userId string) (*models.User[UA], error) {
-	var (
-		user       models.User[UA]
-		attrsBytes []byte
-	)
+	var user models.User[UA]
 	row := a.Conn.QueryRow(context.Background(), fmt.Sprintf("SELECT `id`, `attributes` FROM `%s` WHERE `id` = $1", a.Tables.UserTable), userId)
-	err := row.Scan(&user.ID, &attrsBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(attrsBytes, &user.Attributes)
-	if err != nil {
+	if err := row.Scan(&user.ID, &user.Attributes); err != nil {
 		return nil, err
 	}
 
@@ -61,15 +58,8 @@ func (a *PostgreSQLAdapter[UA, SA]) GetUser(userId string) (*models.User[UA], er
 
 func (a *PostgreSQLAdapter[UA, SA]) UpdateUser(userId string, attributes UA) (*models.User[UA], error) {
 	updatedRow := a.Conn.QueryRow(context.Background(), fmt.Sprintf("UPDATE `%s` SET attributes = $1 where id = $2 returning id, attributes", a.Tables.UserTable), attributes, userId)
-	var (
-		updatedUser models.User[UA]
-		attrsBytes  []byte
-	)
-	if err := updatedRow.Scan(&updatedUser.ID, &attrsBytes); err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(attrsBytes, &updatedUser.Attributes); err != nil {
+	var updatedUser models.User[UA]
+	if err := updatedRow.Scan(&updatedUser.ID, &updatedUser.Attributes); err != nil {
 		return nil, err
 	}
 
@@ -77,16 +67,14 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateUser(userId string, attributes UA) (*m
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) DeleteUser(userId string) error {
-	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM `%s` WHERE `id` = $1", a.Tables.UserTable), userId)
-	if err != nil {
+	if _, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM `%s` WHERE `id` = $1", a.Tables.UserTable), userId); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) CreateSession(session *models.DBSession[SA]) error {
-	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO `%s` (`id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes`) VALUES ($1, $2, $3, $4, $5)", a.Tables.SessionTable), session.ID, session.UserId, session.ActiveExpiresAt, session.IdleExpiresAt, session.Attributes)
-	if err != nil {
+	if _, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO `%s` (`id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes`) VALUES ($1, $2, $3, $4, $5)", a.Tables.SessionTable), session.ID, session.UserId, session.ActiveExpiresAt, session.IdleExpiresAt, session.Attributes); err != nil {
 		return err
 	}
 	return nil
@@ -94,19 +82,12 @@ func (a *PostgreSQLAdapter[UA, SA]) CreateSession(session *models.DBSession[SA])
 
 func (a *PostgreSQLAdapter[UA, SA]) GetSessionAndUser(sessionId string) (*models.DBSession[SA], *models.User[UA], error) {
 	row := a.Conn.QueryRow(context.Background(), fmt.Sprintf("SELECT `id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes` FROM `%s` WHERE `id` = $1", a.Tables.SessionTable), sessionId)
-	var (
-		session    models.DBSession[SA]
-		attrsBytes []byte
-	)
-	if err := row.Scan(&session.ID, &session.UserId, &session.ActiveExpiresAt, &session.IdleExpiresAt, &attrsBytes); err != nil {
+	var session models.DBSession[SA]
+	if err := row.Scan(&session.ID, &session.UserId, &session.ActiveExpiresAt, &session.IdleExpiresAt, &session.Attributes); err != nil {
 		return nil, nil, err
 	}
 
-	if err := json.Unmarshal(attrsBytes, &session.Attributes); err != nil {
-		return nil, nil, err
-	}
-
-	user, err := a.GetUser(session.UserId)
+	user, err := a.GetUser(deref(session.UserId))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -135,18 +116,28 @@ func (a *PostgreSQLAdapter[UA, SA]) GetSessionsByUser(userId string) ([]*models.
 	return sessions, nil
 }
 
-func (a *PostgreSQLAdapter[UA, SA]) UpdateSession(sessionId string, attributes SA) (*models.DBSession[SA], error) {
-	updatedRow := a.Conn.QueryRow(context.Background(), fmt.Sprintf("UPDATE `%s` SET `attributes` = $1 where `id` = $2 returning `id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes`", a.Tables.SessionTable), attributes, sessionId)
-	var (
-		session    models.DBSession[SA]
-		attrsBytes []byte
+func (a *PostgreSQLAdapter[UA, SA]) UpdateSession(sessionId string, newSession *models.DBSession[SA]) (*models.DBSession[SA], error) {
+	updatedRow := a.Conn.QueryRow(
+		context.Background(),
+		fmt.Sprintf(
+			"UPDATE `%s` SET "+
+				"`id` = COALESCE($1, `id`), "+
+				"`user_id` = COALESCE($2, `user_id`), "+
+				"`active_expires_at` = COALESCE($3, `active_expires_at`), "+
+				"`idle_expires_at` = COALESCE($4, `idle_expires_at`), "+
+				"`attributes` = COALESCE($5, `attributes`) "+
+				"WHERE `id` = $6 RETURNING `id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes`",
+			a.Tables.SessionTable,
+		),
+		newSession.ID,
+		newSession.UserId,
+		newSession.ActiveExpiresAt,
+		newSession.IdleExpiresAt,
+		newSession.Attributes,
+		sessionId,
 	)
-
-	if err := updatedRow.Scan(session.ID, session.UserId, session.ActiveExpiresAt, session.IdleExpiresAt, &attrsBytes); err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(attrsBytes, &session.Attributes); err != nil {
+	var session models.DBSession[SA]
+	if err := updatedRow.Scan(&session.ID, &session.UserId, &session.ActiveExpiresAt, &session.IdleExpiresAt, &session.Attributes); err != nil {
 		return nil, err
 	}
 
@@ -220,17 +211,14 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateKey(keyId string, newKey *models.DBKey
 		context.Background(),
 		fmt.Sprintf(
 			"UPDATE `%s` SET "+
-				"`id` = CASE WHEN $1 THEN $2 ELSE `id` END, "+
-				"`user_id` = CASE WHEN $3 THEN $4 ELSE `user_id` END, "+
-				"`password` = CASE WHEN $5 THEN $6 ELSE `password` END "+
-				"WHERE `id` = $7 RETURNING `id`, `user_id`, `password`",
+				"`id` = COALESCE($1, `id`), "+
+				"`user_id` = COALESCE($2, `user_id`), "+
+				"`password` = COALESCE($3, `password`) "+
+				"WHERE `id` = $4 RETURNING `id`, `user_id`, `password`",
 			a.Tables.KeyTable,
 		),
-		newKey.ID != nil,
-		keyId,
-		newKey.UserID != nil,
+		newKey.ID,
 		newKey.UserID,
-		newKey.Password != nil,
 		newKey.Password,
 		keyId,
 	)

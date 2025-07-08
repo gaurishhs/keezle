@@ -16,15 +16,15 @@ type Key struct {
 
 type User[UA AnyStruct] struct {
 	ID         string
-	Attributes UA
+	Attributes *UA
 }
 
 type DBSession[SA AnyStruct] struct {
-	ID              string
-	UserId          string
-	ActiveExpiresAt time.Time
-	IdleExpiresAt   time.Time
-	Attributes      SA
+	ID              *string
+	UserId          *string
+	ActiveExpiresAt *time.Time
+	IdleExpiresAt   *time.Time
+	Attributes      *SA
 }
 
 type Session[UA, SA AnyStruct] struct {
@@ -32,5 +32,7 @@ type Session[UA, SA AnyStruct] struct {
 	User            *User[UA]
 	ActiveExpiresAt time.Time
 	IdleExpiresAt   time.Time
-	Attributes      SA
+	Attributes      *SA
+	State           string
+	Fresh           bool
 }

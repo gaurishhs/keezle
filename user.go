@@ -13,7 +13,18 @@ type CreateUserOptions[UA models.AnyStruct] struct {
 		ProviderUserID string
 		Password       string
 	}
-	Attributes UA
+	Attributes *UA
+}
+
+func (k *Keezle[UA, SA]) TransformUser(dbUser *models.User[UA]) (*models.User[UA], error) {
+	userAttributes, err := k.Config.GetUserAttributes(dbUser)
+	if err != nil {
+		return nil, err
+	}
+	return &models.User[UA]{
+		ID:         dbUser.ID,
+		Attributes: userAttributes,
+	}, nil
 }
 
 func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA], error) {
@@ -25,9 +36,13 @@ func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA
 		Attributes: opts.Attributes,
 	}
 	if opts.Key.Provider == "" && opts.Key.ProviderUserID == "" {
-		k.Config.Adapter.CreateUser(&adapters.CreateUserOpts[UA]{
+		err := k.Config.Adapter.CreateUser(&adapters.CreateUserOpts[UA]{
 			User: user,
 		})
+		if err != nil {
+			return nil, err
+		}
+		return k.TransformUser(user)
 	}
 
 	keyId, err := createKeyId(opts.Key.Provider, opts.Key.ProviderUserID)
@@ -43,11 +58,19 @@ func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA
 		},
 	})
 
-	return user, err
+	if err != nil {
+		return nil, err
+	}
+
+	return k.TransformUser(user)
 }
 
 func (k *Keezle[UA, SA]) GetUser(userId string) (*models.User[UA], error) {
-	return k.Config.Adapter.GetUser(userId)
+	user, err := k.Config.Adapter.GetUser(userId)
+	if err != nil {
+		return nil, err
+	}
+	return k.TransformUser(user)
 }
 
 func (k *Keezle[UA, SA]) UpdateUser(userId string, attributes UA) (*models.User[UA], error) {

@@ -1,3 +1,10 @@
 package models
 
-type AnyStruct = any
+import (
+	"database/sql/driver"
+)
+
+type AnyStruct interface {
+	Value() (driver.Value, error)
+	Scan(src any) error
+}

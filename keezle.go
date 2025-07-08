@@ -7,7 +7,6 @@ import (
 	"github.com/gaurishhs/keezle/logger"
 	"github.com/gaurishhs/keezle/models"
 	"github.com/gaurishhs/keezle/utils"
-	"github.com/go-playground/validator/v10"
 )
 
 type SessionCookieConfig struct {
@@ -22,29 +21,23 @@ type SessionConfig struct {
 	Cookie       *SessionCookieConfig
 }
 
-type AttributesConfig[UA, SA any] struct {
-	User    UA
-	Session SA
-}
-
 type Config[UA, SA models.AnyStruct] struct {
 	Adapter                adapters.Adapter[UA, SA]
 	Session                *SessionConfig
 	Logger                 logger.Logger
 	Hash                   func(string) (string, error)
 	ComparePasswordAndHash func(string, string) (bool, error)
-	Attributes             *AttributesConfig[UA, SA]
+	GetUserAttributes      func(user *models.User[UA]) (*UA, error)
+	GetSessionAttributes   func(dbSession *models.DBSession[SA]) (*SA, error)
 }
 
 type Keezle[UA, SA models.AnyStruct] struct {
-	Config    *Config[UA, SA]
-	Validator *validator.Validate
+	Config *Config[UA, SA]
 }
 
 func New[UA, SA models.AnyStruct](config *Config[UA, SA]) (res *Keezle[UA, SA]) {
 	res = &Keezle[UA, SA]{
-		Config:    config,
-		Validator: validator.New(validator.WithRequiredStructEnabled()),
+		Config: config,
 	}
 
 	if res.Config.Adapter == nil {
@@ -56,10 +49,12 @@ func New[UA, SA models.AnyStruct](config *Config[UA, SA]) (res *Keezle[UA, SA]) 
 	}
 
 	if res.Config.Hash == nil {
+		res.Config.Logger.Log("debug: hash function is not set, using default hash function")
 		res.Config.Hash = utils.HashPassword
 	}
 
 	if res.Config.ComparePasswordAndHash == nil {
+		res.Config.Logger.Log("debug: compare password and hash function is not set, using default compare password and hash function")
 		res.Config.ComparePasswordAndHash = utils.ComparePasswordAndHash
 	}
 

@@ -15,7 +15,7 @@ type Adapter[UA, SA models.AnyStruct] interface {
 	CreateSession(session *models.DBSession[SA]) error
 	GetSessionAndUser(sessionId string) (*models.DBSession[SA], *models.User[UA], error)
 	GetSessionsByUser(userId string) ([]*models.DBSession[SA], error)
-	UpdateSession(sessionId string, attributes SA) (*models.DBSession[SA], error)
+	UpdateSession(sessionId string, newSession *models.DBSession[SA]) (*models.DBSession[SA], error)
 	DeleteSession(sessionId string) error
 	DeleteAllUserSessions(userId string) error
 	CreateKey(key *models.DBKey) error
