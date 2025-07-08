@@ -39,7 +39,7 @@ func deref(s *string) string {
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) CreateUser(opts *adapters.CreateUserOpts[UA]) error {
-	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO `%s` (id, attributes) VALUES ($1, $2)", a.Tables.UserTable), opts.User.ID, opts.User.Attributes)
+	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO \"%s\" (id, attributes) VALUES ($1, $2)", a.Tables.UserTable), opts.User.ID, opts.User.Attributes)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (a *PostgreSQLAdapter[UA, SA]) CreateUser(opts *adapters.CreateUserOpts[UA]
 
 func (a *PostgreSQLAdapter[UA, SA]) GetUser(userId string) (*models.User[UA], error) {
 	var user models.User[UA]
-	row := a.Conn.QueryRow(context.Background(), fmt.Sprintf("SELECT `id`, `attributes` FROM `%s` WHERE `id` = $1", a.Tables.UserTable), userId)
+	row := a.Conn.QueryRow(context.Background(), fmt.Sprintf("SELECT \"id\", \"attributes\" FROM \"%s\" WHERE \"id\" = $1", a.Tables.UserTable), userId)
 	if err := row.Scan(&user.ID, &user.Attributes); err != nil {
 		return nil, err
 	}
@@ -56,8 +56,21 @@ func (a *PostgreSQLAdapter[UA, SA]) GetUser(userId string) (*models.User[UA], er
 	return &user, nil
 }
 
+func (a *PostgreSQLAdapter[UA, SA]) GetUsersByAttribute(attribute string, value string) ([]*models.User[UA], error) {
+	rows, err := a.Conn.Query(context.Background(), fmt.Sprintf("SELECT \"id\", \"attributes\" from \"%s\" where \"attributes\"->>'%s' = $1", a.Tables.UserTable, attribute), value)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByPos[*models.User[UA]])
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (a *PostgreSQLAdapter[UA, SA]) UpdateUser(userId string, attributes UA) (*models.User[UA], error) {
-	updatedRow := a.Conn.QueryRow(context.Background(), fmt.Sprintf("UPDATE `%s` SET attributes = $1 where id = $2 returning id, attributes", a.Tables.UserTable), attributes, userId)
+	updatedRow := a.Conn.QueryRow(context.Background(), fmt.Sprintf("UPDATE \"%s\" SET attributes = $1 where id = $2 returning id, attributes", a.Tables.UserTable), attributes, userId)
 	var updatedUser models.User[UA]
 	if err := updatedRow.Scan(&updatedUser.ID, &updatedUser.Attributes); err != nil {
 		return nil, err
@@ -67,21 +80,21 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateUser(userId string, attributes UA) (*m
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) DeleteUser(userId string) error {
-	if _, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM `%s` WHERE `id` = $1", a.Tables.UserTable), userId); err != nil {
+	if _, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM \"%s\" WHERE \"id\" = $1", a.Tables.UserTable), userId); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) CreateSession(session *models.DBSession[SA]) error {
-	if _, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO `%s` (`id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes`) VALUES ($1, $2, $3, $4, $5)", a.Tables.SessionTable), session.ID, session.UserId, session.ActiveExpiresAt, session.IdleExpiresAt, session.Attributes); err != nil {
+	if _, err := a.Conn.Exec(context.Background(), fmt.Sprintf("INSERT INTO \"%s\" (\"id\", \"user_id\", \"active_expires_at\", \"idle_expires_at\", \"attributes\") VALUES ($1, $2, $3, $4, $5)", a.Tables.SessionTable), session.ID, session.UserId, session.ActiveExpiresAt, session.IdleExpiresAt, session.Attributes); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) GetSessionAndUser(sessionId string) (*models.DBSession[SA], *models.User[UA], error) {
-	row := a.Conn.QueryRow(context.Background(), fmt.Sprintf("SELECT `id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes` FROM `%s` WHERE `id` = $1", a.Tables.SessionTable), sessionId)
+	row := a.Conn.QueryRow(context.Background(), fmt.Sprintf("SELECT \"id\", \"user_id\", \"active_expires_at\", \"idle_expires_at\", \"attributes\" FROM \"%s\" WHERE \"id\" = $1", a.Tables.SessionTable), sessionId)
 	var session models.DBSession[SA]
 	if err := row.Scan(&session.ID, &session.UserId, &session.ActiveExpiresAt, &session.IdleExpiresAt, &session.Attributes); err != nil {
 		return nil, nil, err
@@ -99,7 +112,7 @@ func (a *PostgreSQLAdapter[UA, SA]) GetSessionsByUser(userId string) ([]*models.
 	rows, err := a.Conn.Query(
 		context.Background(),
 		fmt.Sprintf(
-			"SELECT `id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes` FROM `%s` WHERE `user_id` = ?",
+			"SELECT \"id\", \"user_id\", \"active_expires_at\", \"idle_expires_at\", \"attributes\" FROM \"%s\" WHERE \"user_id\" = ?",
 			a.Tables.SessionTable,
 		),
 		userId,
@@ -120,13 +133,13 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateSession(sessionId string, newSession *
 	updatedRow := a.Conn.QueryRow(
 		context.Background(),
 		fmt.Sprintf(
-			"UPDATE `%s` SET "+
-				"`id` = COALESCE($1, `id`), "+
-				"`user_id` = COALESCE($2, `user_id`), "+
-				"`active_expires_at` = COALESCE($3, `active_expires_at`), "+
-				"`idle_expires_at` = COALESCE($4, `idle_expires_at`), "+
-				"`attributes` = COALESCE($5, `attributes`) "+
-				"WHERE `id` = $6 RETURNING `id`, `user_id`, `active_expires_at`, `idle_expires_at`, `attributes`",
+			"UPDATE \"%s\" SET "+
+				"\"id\" = COALESCE($1, \"id\"), "+
+				"\"user_id\" = COALESCE($2, \"user_id\"), "+
+				"\"active_expires_at\" = COALESCE($3, \"active_expires_at\"), "+
+				"\"idle_expires_at\" = COALESCE($4, \"idle_expires_at\"), "+
+				"\"attributes\" = COALESCE($5, \"attributes\") "+
+				"WHERE \"id\" = $6 RETURNING \"id\", \"user_id\", \"active_expires_at\", \"idle_expires_at\", \"attributes\"",
 			a.Tables.SessionTable,
 		),
 		newSession.ID,
@@ -145,7 +158,7 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateSession(sessionId string, newSession *
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) DeleteSession(sessionId string) error {
-	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM `%s` WHERE `id` = $1", a.Tables.SessionTable), sessionId)
+	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM \"%s\" WHERE \"id\" = $1", a.Tables.SessionTable), sessionId)
 	if err != nil {
 		return err
 	}
@@ -153,7 +166,7 @@ func (a *PostgreSQLAdapter[UA, SA]) DeleteSession(sessionId string) error {
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) DeleteAllUserSessions(userId string) error {
-	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM `%s` WHERE `user_id` = $1", a.Tables.SessionTable), userId)
+	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM \"%s\" WHERE \"user_id\" = $1", a.Tables.SessionTable), userId)
 	if err != nil {
 		return err
 	}
@@ -162,7 +175,7 @@ func (a *PostgreSQLAdapter[UA, SA]) DeleteAllUserSessions(userId string) error {
 
 func (a *PostgreSQLAdapter[UA, SA]) CreateKey(key *models.DBKey) error {
 	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf(
-		"INSERT INTO `%s` (`id`, `user_id`, `password`) VALUES ($1, $2, $3)",
+		"INSERT INTO \"%s\" (\"id\", \"user_id\", \"password\") VALUES ($1, $2, $3)",
 		a.Tables.KeyTable,
 	), key.ID, key.UserID, key.Password)
 	if err != nil {
@@ -174,7 +187,7 @@ func (a *PostgreSQLAdapter[UA, SA]) CreateKey(key *models.DBKey) error {
 func (a *PostgreSQLAdapter[UA, SA]) GetKey(keyId string) (*models.DBKey, error) {
 	row := a.Conn.QueryRow(
 		context.Background(),
-		fmt.Sprintf("SELECT `id`, `user_id`, `password` FROM `%s` WHERE `id` = $1", a.Tables.KeyTable),
+		fmt.Sprintf("SELECT \"id\", \"user_id\", \"password\" FROM \"%s\" WHERE \"id\" = $1", a.Tables.KeyTable),
 		keyId,
 	)
 	var key models.DBKey
@@ -189,7 +202,7 @@ func (a *PostgreSQLAdapter[UA, SA]) GetKeysByUser(userId string) ([]*models.DBKe
 	rows, err := a.Conn.Query(
 		context.Background(),
 		fmt.Sprintf(
-			"SELECT `id`, `user_id`, `attributes` FROM `%s` WHERE `user_id` = $1",
+			"SELECT \"id\", \"user_id\", \"attributes\" FROM \"%s\" WHERE \"user_id\" = $1",
 			a.Tables.KeyTable,
 		),
 		userId,
@@ -210,11 +223,11 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateKey(keyId string, newKey *models.DBKey
 	updatedRow := a.Conn.QueryRow(
 		context.Background(),
 		fmt.Sprintf(
-			"UPDATE `%s` SET "+
-				"`id` = COALESCE($1, `id`), "+
-				"`user_id` = COALESCE($2, `user_id`), "+
-				"`password` = COALESCE($3, `password`) "+
-				"WHERE `id` = $4 RETURNING `id`, `user_id`, `password`",
+			"UPDATE \"%s\" SET "+
+				"\"id\" = COALESCE($1, \"id\"), "+
+				"\"user_id\" = COALESCE($2, \"user_id\"), "+
+				"\"password\" = COALESCE($3, \"password\") "+
+				"WHERE \"id\" = $4 RETURNING \"id\", \"user_id\", \"password\"",
 			a.Tables.KeyTable,
 		),
 		newKey.ID,
@@ -231,7 +244,7 @@ func (a *PostgreSQLAdapter[UA, SA]) UpdateKey(keyId string, newKey *models.DBKey
 }
 
 func (a *PostgreSQLAdapter[UA, SA]) DeleteKey(keyId string) error {
-	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM `%s` WHERE `id` = $1", a.Tables.KeyTable), keyId)
+	_, err := a.Conn.Exec(context.Background(), fmt.Sprintf("DELETE FROM \"%s\" WHERE \"id\" = $1", a.Tables.KeyTable), keyId)
 	if err != nil {
 		return err
 	}

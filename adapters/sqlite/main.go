@@ -57,6 +57,20 @@ func (a *SQLiteAdapter[UA, SA]) GetUser(userId string) (*models.User[UA], error)
 	return &user, nil
 }
 
+func (a *SQLiteAdapter[UA, SA]) GetUsersByAttribute(attribute string, value string) ([]*models.User[UA], error) {
+	rows, err := a.DB.Query(fmt.Sprintf("SELECT `id`, `attributes` from `%s` where `attributes`->>'%s' = ?", a.Tables.UserTable, attribute), value)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []*models.User[UA]
+	err = rowsToStructs(rows, &users)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (a *SQLiteAdapter[UA, SA]) UpdateUser(userId string, attributes UA) (*models.User[UA], error) {
 	updatedRow := a.DB.QueryRow(fmt.Sprintf("UPDATE `%s` SET attributes = ? where id = ? returning id, attributes", a.Tables.UserTable), attributes, userId)
 	var updatedUser models.User[UA]

@@ -80,3 +80,19 @@ func (k *Keezle[UA, SA]) UpdateUser(userId string, attributes UA) (*models.User[
 func (k *Keezle[UA, SA]) DeleteUser(userId string) error {
 	return k.Config.Adapter.DeleteUser(userId)
 }
+
+func (k *Keezle[UA, SA]) GetUsersByAttribute(attribute string, value string) (*models.User[UA], error) {
+	users, err := k.Config.Adapter.GetUsersByAttribute(attribute, value)
+	if err != nil {
+		return nil, err
+	}
+	var user *models.User[UA]
+	for _, u := range users {
+		user = u
+		break
+	}
+	if user == nil {
+		return nil, nil
+	}
+	return k.TransformUser(user)
+}
