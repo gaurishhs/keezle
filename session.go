@@ -170,26 +170,6 @@ func (k *Keezle[UA, SA]) DeleteInvalidUserSessions(userId string) error {
 	return nil
 }
 
-func (k *Keezle[UA, SA]) CreateSessionCookie(session *models.Session[UA, SA]) *http.Cookie {
-	var expires time.Time
-	if session == nil {
-		expires = time.Unix(0, 0)
-	} else if k.Config.Session.Cookie.Expires {
-		expires = session.IdleExpiresAt
-	} else {
-		expires = time.Now().Add(time.Hour * 24 * 365)
-	}
-
-	return &http.Cookie{
-		Name:     k.Config.Session.Cookie.Name,
-		HttpOnly: true,
-		Secure:   k.Config.Session.Cookie.Secure,
-		Expires:  expires,
-		Value:    session.ID,
-		// TODO: k.Config.Session.Cookie attributes should be configurable
-	}
-}
-
 func (k *Keezle[UA, SA]) ValidateSession(sessionId string) (*models.Session[UA, SA], error) {
 	if sessionId == "" {
 		return nil, ErrInvalidSessionId
@@ -228,6 +208,26 @@ func (k *Keezle[UA, SA]) ValidateSession(sessionId string) (*models.Session[UA, 
 		State:           updatedSession.State,
 		Fresh:           true,
 	}, nil
+}
+
+func (k *Keezle[UA, SA]) CreateSessionCookie(session *models.Session[UA, SA]) *http.Cookie {
+	var expires time.Time
+	if session == nil {
+		expires = time.Unix(0, 0)
+	} else if k.Config.Session.Cookie.Expires {
+		expires = session.IdleExpiresAt
+	} else {
+		expires = time.Now().Add(time.Hour * 24 * 365)
+	}
+
+	return &http.Cookie{
+		Name:     k.Config.Session.Cookie.Name,
+		HttpOnly: true,
+		Secure:   k.Config.Session.Cookie.Secure,
+		Expires:  expires,
+		Value:    session.ID,
+		// TODO: k.Config.Session.Cookie attributes should be configurable
+	}
 }
 
 func (k *Keezle[UA, SA]) ReadSessionCookie(req *http.Request) string {
