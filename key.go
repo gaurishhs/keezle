@@ -6,6 +6,7 @@ import (
 	"github.com/gaurishhs/keezle/models"
 )
 
+// CreateKeyOptions defines the options for creating a new key.
 type CreateKeyOptions struct {
 	UserID         string
 	Provider       string
@@ -28,6 +29,9 @@ func deref(s *string) string {
 	return *s
 }
 
+// TransformKey transforms a database key into a more secure representation.
+// It dereferences the ID and UserID fields and sets the Password field based on whether it
+// is nil or not.
 func TransformKey(key *models.DBKey) *models.Key {
 	return &models.Key{
 		ID:       deref(key.ID),
@@ -36,6 +40,7 @@ func TransformKey(key *models.DBKey) *models.Key {
 	}
 }
 
+// CreateKey creates a new key with the provided options.
 func (k *Keezle[UA, SA]) CreateKey(opts CreateKeyOptions) (*models.Key, error) {
 	keyId, err := createKeyId(opts.Provider, opts.ProviderUserID)
 	if err != nil {
@@ -63,6 +68,7 @@ func (k *Keezle[UA, SA]) CreateKey(opts CreateKeyOptions) (*models.Key, error) {
 	return TransformKey(key), nil
 }
 
+// DeleteKey deletes a key by its provider and provider user ID.
 func (k *Keezle[UA, SA]) DeleteKey(provider, providerUserId string) error {
 	keyId, err := createKeyId(provider, providerUserId)
 	if err != nil {
@@ -71,6 +77,7 @@ func (k *Keezle[UA, SA]) DeleteKey(provider, providerUserId string) error {
 	return k.Config.Adapter.DeleteKey(keyId)
 }
 
+// GetKey retrieves a key by its provider and provider user ID.
 func (k *Keezle[UA, SA]) GetKey(provider, providerUserId string) (*models.Key, error) {
 	keyId, err := createKeyId(provider, providerUserId)
 	if err != nil {
@@ -85,6 +92,7 @@ func (k *Keezle[UA, SA]) GetKey(provider, providerUserId string) (*models.Key, e
 	return TransformKey(key), nil
 }
 
+// GetKeysByUser retrieves all keys associated with a user by their user ID.
 func (k *Keezle[UA, SA]) GetKeysByUser(userId string) ([]*models.Key, error) {
 	_, err := k.GetUser(userId)
 	if err != nil {
@@ -103,6 +111,7 @@ func (k *Keezle[UA, SA]) GetKeysByUser(userId string) ([]*models.Key, error) {
 	return keys, nil
 }
 
+// UpdateKey updates an existing key with a new password.
 func (k *Keezle[UA, SA]) UpdateKey(provider, providerUserId, password string) (*models.Key, error) {
 	keyId, err := createKeyId(provider, providerUserId)
 	if err != nil {
@@ -125,6 +134,7 @@ func (k *Keezle[UA, SA]) UpdateKey(provider, providerUserId, password string) (*
 	return TransformKey(updatedKey), nil
 }
 
+// UseKey retrieves a key by its provider and provider user ID, and validates the password if it exists.
 func (k *Keezle[UA, SA]) UseKey(provider, providerUserId, password string) (*models.Key, error) {
 	keyId, err := createKeyId(provider, providerUserId)
 	if err != nil {

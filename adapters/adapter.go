@@ -2,11 +2,13 @@ package adapters
 
 import "github.com/gaurishhs/keezle/models"
 
+// CreateUserOpts defines the options for creating a new user.
 type CreateUserOpts[UA models.AnyStruct] struct {
 	User *models.User[UA]
 	Key  *models.DBKey
 }
 
+// Adapter is an interface that defines the methods required for a Keezle adapter.
 type Adapter[UA, SA models.AnyStruct] interface {
 	CreateUser(opts *CreateUserOpts[UA]) error
 	GetUser(userId string) (*models.User[UA], error)

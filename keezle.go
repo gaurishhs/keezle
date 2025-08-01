@@ -1,3 +1,7 @@
+// Package keezle provides an easy-to-use authentication and session management system.
+// It allows you to manage user sessions, authenticate users, and handle user attributes.
+// It is designed to be flexible and extensible, allowing you to use your own database adapters and
+// customize the session management behavior.
 package keezle
 
 import (
@@ -9,18 +13,26 @@ import (
 	"github.com/gaurishhs/keezle/utils"
 )
 
+// SessionCookieConfig defines the configuration for session cookies.
 type SessionCookieConfig struct {
 	Expires bool
 	Name    string
 	Secure  bool
 }
 
+// SessionConfig defines the configuration for user sessions.
 type SessionConfig struct {
 	ActivePeriod time.Duration
 	IdlePeriod   time.Duration
 	Cookie       *SessionCookieConfig
 }
 
+type CSRFProtectionConfig struct {
+	Host              string
+	AllowedSubdomains []string
+}
+
+// Config defines the configuration for the Keezle instance.
 type Config[UA, SA models.AnyStruct] struct {
 	Adapter                adapters.Adapter[UA, SA]
 	Session                *SessionConfig
@@ -29,12 +41,18 @@ type Config[UA, SA models.AnyStruct] struct {
 	ComparePasswordAndHash func(string, string) (bool, error)
 	GetUserAttributes      func(user *models.User[UA]) (*UA, error)
 	GetSessionAttributes   func(dbSession *models.DBSession[SA]) (*SA, error)
+	CSRF                   *CSRFProtectionConfig
 }
 
+// Keezle is the main struct that holds the configuration and provides methods for authentication and session management.
+// It is parameterized by user attributes (UA) and session attributes (SA).
+// The user attributes represent the data associated with a user, while the session attributes represent the data
+// associated with a session.
 type Keezle[UA, SA models.AnyStruct] struct {
 	Config *Config[UA, SA]
 }
 
+// New creates a new instance of Keezle with the provided configuration.
 func New[UA, SA models.AnyStruct](config *Config[UA, SA]) (res *Keezle[UA, SA]) {
 	res = &Keezle[UA, SA]{
 		Config: config,

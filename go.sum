@@ -1,5 +1,5 @@
-github.com/gaurishhs/keezle/models v0.0.0-20250707165045-a16506183442 h1:vEeOkpHSe2/10yToTc2VuUFi9+fn94N6T9kRskQFtUM=
-github.com/gaurishhs/keezle/models v0.0.0-20250707165045-a16506183442/go.mod h1:Qwvxk8AgBQwKEuzQEkzBogr2KBt6mQaYmU71MY/oNGM=
+github.com/gaurishhs/keezle/models v0.0.0-20250709172739-4ff048670fb0 h1:L9JyXCd/dVlHgJV05/8e86mjhwhcBgnlQQjrvNIq5g4=
+github.com/gaurishhs/keezle/models v0.0.0-20250709172739-4ff048670fb0/go.mod h1:Qwvxk8AgBQwKEuzQEkzBogr2KBt6mQaYmU71MY/oNGM=
 github.com/rs/xid v1.6.0 h1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=
 github.com/rs/xid v1.6.0/go.mod h1:7XoLgs4eV+QndskICGsho+ADou8ySMSjJKDIan90Nz0=
 golang.org/x/crypto v0.39.0 h1:SHs+kF4LP+f+p14esP5jAoDpHU8Gu/v9lFRK6IT5imM=

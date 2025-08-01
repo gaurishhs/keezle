@@ -6,6 +6,7 @@ import (
 	"github.com/rs/xid"
 )
 
+// CreateUserOptions defines the options for creating a new user.
 type CreateUserOptions[UA models.AnyStruct] struct {
 	UserID string
 	Key    struct {
@@ -16,6 +17,8 @@ type CreateUserOptions[UA models.AnyStruct] struct {
 	Attributes *UA
 }
 
+// TransformUser transforms a database user into a user with attributes.
+// It uses the GetUserAttributes function from the configuration to extract user attributes.
 func (k *Keezle[UA, SA]) TransformUser(dbUser *models.User[UA]) (*models.User[UA], error) {
 	userAttributes, err := k.Config.GetUserAttributes(dbUser)
 	if err != nil {
@@ -27,6 +30,7 @@ func (k *Keezle[UA, SA]) TransformUser(dbUser *models.User[UA]) (*models.User[UA
 	}, nil
 }
 
+// CreateUser creates a new user with the provided options.
 func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA], error) {
 	if opts.UserID == "" {
 		opts.UserID = xid.New().String()
@@ -65,6 +69,7 @@ func (k *Keezle[UA, SA]) CreateUser(opts CreateUserOptions[UA]) (*models.User[UA
 	return k.TransformUser(user)
 }
 
+// GetUser retrieves a user by their ID.
 func (k *Keezle[UA, SA]) GetUser(userId string) (*models.User[UA], error) {
 	user, err := k.Config.Adapter.GetUser(userId)
 	if err != nil {
@@ -73,26 +78,32 @@ func (k *Keezle[UA, SA]) GetUser(userId string) (*models.User[UA], error) {
 	return k.TransformUser(user)
 }
 
+// UpdateUser updates the attributes of an existing user.
 func (k *Keezle[UA, SA]) UpdateUser(userId string, attributes UA) (*models.User[UA], error) {
 	return k.Config.Adapter.UpdateUser(userId, attributes)
 }
 
+// DeleteUser deletes a user by their ID.
 func (k *Keezle[UA, SA]) DeleteUser(userId string) error {
 	return k.Config.Adapter.DeleteUser(userId)
 }
 
-func (k *Keezle[UA, SA]) GetUsersByAttribute(attribute string, value string) (*models.User[UA], error) {
+// GetUsersByAttribute retrieves users based on a specific attribute and its value.
+func (k *Keezle[UA, SA]) GetUsersByAttribute(attribute string, value string) ([]*models.User[UA], error) {
 	users, err := k.Config.Adapter.GetUsersByAttribute(attribute, value)
 	if err != nil {
 		return nil, err
 	}
-	var user *models.User[UA]
-	for _, u := range users {
-		user = u
-		break
-	}
-	if user == nil {
+	if len(users) == 0 {
 		return nil, nil
 	}
-	return k.TransformUser(user)
+	var transformedUsers []*models.User[UA]
+	for _, user := range users {
+		transformedUser, err := k.TransformUser(user)
+		if err != nil {
+			return nil, err
+		}
+		transformedUsers = append(transformedUsers, transformedUser)
+	}
+	return transformedUsers, nil
 }
