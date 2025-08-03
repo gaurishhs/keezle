@@ -26,6 +26,13 @@ type params struct {
 	saltLength uint32
 }
 
+// HashPassword hashes a password using Argon2id using the following parameters:
+// - memory: 46 MiB
+// - threads: 2
+// - time: 2 iterations
+// - keyLength: 32 bytes
+// - saltLength: 16 bytes
+// The resulting hash is encoded in a format compatible with the Argon2 specification.
 func HashPassword(password string) (string, error) {
 	p := &params{
 		memory:     47104, // 46 MiB

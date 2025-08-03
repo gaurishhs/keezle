@@ -9,6 +9,7 @@ import (
 	"github.com/gaurishhs/keezle/models"
 )
 
+// AllowedMethods defines the HTTP methods that are allowed for CSRF protection.
 var AllowedMethods = []string{
 	"GET",
 	"HEAD",
@@ -16,6 +17,7 @@ var AllowedMethods = []string{
 	"TRACE",
 }
 
+// AuthRequest represents an authentication request that can be validated and managed.
 type AuthRequest[UA, SA models.AnyStruct] struct {
 	Request      *http.Request
 	SessionID    *string
@@ -25,10 +27,12 @@ type AuthRequest[UA, SA models.AnyStruct] struct {
 	validateErr  error
 }
 
+// HandleRequest processes the incoming HTTP request and returns an AuthRequest.
+// It checks for CSRF protection if configured and validates the request origin.
 func (k *Keezle[UA, SA]) HandleRequest(req *http.Request) (*AuthRequest[UA, SA], error) {
 	if k.Config.CSRF != nil {
 		if !isValidRequestOrigin(k.Config.CSRF, req) {
-			return nil, errors.New("invalid request origin")
+			return nil, ErrInvalidRequestOrigin
 		}
 		return &AuthRequest[UA, SA]{
 			Request:   req,
@@ -43,6 +47,7 @@ func (k *Keezle[UA, SA]) HandleRequest(req *http.Request) (*AuthRequest[UA, SA],
 	}, nil
 }
 
+// SetSession sets the session for the AuthRequest and updates the session cookie.
 func (r *AuthRequest[UA, SA]) SetSession(session *models.Session[UA, SA]) {
 	if session == nil {
 		r.SessionID = nil
@@ -56,6 +61,7 @@ func (r *AuthRequest[UA, SA]) SetSession(session *models.Session[UA, SA]) {
 	r.Request.AddCookie(r.Keezle.CreateSessionCookie(session))
 }
 
+// Validate validates the session associated with the AuthRequest and resets the session if it is idle.
 func (r *AuthRequest[UA, SA]) Validate() (*models.Session[UA, SA], error) {
 	r.validateOnce.Do((func() {
 		if r.SessionID == nil {
@@ -78,6 +84,7 @@ func (r *AuthRequest[UA, SA]) Validate() (*models.Session[UA, SA], error) {
 	return r.validateRes, r.validateErr
 }
 
+// Invalidate invalidates the internal cache for the validate method.
 func (r *AuthRequest[UA, SA]) Invalidate() {
 	r.validateOnce = sync.Once{}
 	r.validateRes = nil
