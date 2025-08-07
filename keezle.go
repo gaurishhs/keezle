@@ -1,4 +1,4 @@
-// Package keezle provides an easy-to-use authentication and session management system.
+// Package keezle simplifies user authentication and session management in Go applications.
 // It allows you to manage user sessions, authenticate users, and handle user attributes.
 // It is designed to be flexible and extensible, allowing you to use your own database adapters and
 // customize the session management behavior.
