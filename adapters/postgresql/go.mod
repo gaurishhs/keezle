@@ -1,4 +1,4 @@
-module github.com/gaurishhs/keezle/adapters/sqlite
+module github.com/gaurishhs/keezle/adapters/postgresql
 
 go 1.24.2
 
